@@ -1,0 +1,12 @@
+tqdm
+Pillow
+scikit-learn
+ftfy
+regex
+git+https://github.com/openai/CLIP.git
+fairscale==0.4.4
+pycocoevalcap
+natsort
+timm
+tokenizers
+transformers==4.15.0
