@@ -78,7 +78,7 @@ def preprocess_image(img_path, image_size=224):
     Returns:
         Tensor: Preprocessed image tensor.
     """
-    img = Image.open(img_path)
+    img = Image.open(img_path).convert('RGB')
     img = img.resize((image_size, image_size))
     return preprocess(img)
 
@@ -94,11 +94,14 @@ def calculate_metrics(true_labels, predictions):
         dict: Dictionary containing confusion matrix, accuracy, precision, and recall.
     """
     metrics_dict = {}
+    if len(true_labels) == 0 or len(predictions) == 0:
+        return {"confusion_matrix": [], "accuracy": np.nan, "precision": np.nan, "recall": np.nan}
+    
     conf_matrix = confusion_matrix(true_labels, predictions)
     metrics_dict['confusion_matrix'] = conf_matrix.tolist()
     metrics_dict['accuracy'] = accuracy_score(true_labels, predictions)
-    metrics_dict['precision'] = precision_score(true_labels, predictions, average='weighted')
-    metrics_dict['recall'] = recall_score(true_labels, predictions, average='weighted')
+    metrics_dict['precision'] = precision_score(true_labels, predictions, average='weighted', zero_division=0)
+    metrics_dict['recall'] = recall_score(true_labels, predictions, average='weighted', zero_division=0)
     return metrics_dict
 
 # Argument parsing
@@ -123,8 +126,11 @@ model = torch.load("finetune_clip.pt").to(device)
 linear = NeuralNet(1024, [512, 256], 2).to(device)
 linear = torch.load('clip_linear.pt')
 
-true_labels = []  # List to store true labels
-all_predictions = []  # List to store predictions
+true_labels_real = []
+all_predictions_real = []
+
+true_labels_fake = []
+all_predictions_fake = []
 
 # Ensure the output directory exists
 real_metric_path = "metrics_real"
@@ -132,71 +138,15 @@ fake_metric_path = "metrics_fake"
 os.makedirs(real_metric_path, exist_ok=True)
 os.makedirs(fake_metric_path, exist_ok=True)
 
+# Process images
 for img_name in tqdm(os.listdir(args.image_folder)):
     img_path = os.path.join(args.image_folder, img_name)
     img = Image.open(img_path).convert('RGB')
-    tform = transforms.Compose(
-        [
-            transforms.Resize(224),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-        ]
-    )
-    img = tform(img)
-    img = img.unsqueeze(0).to("cuda")
-
-    caption = blip.generate(img, sample=False, num_beams=1, max_length=60, min_length=5) 
-    text = clip.tokenize(list(caption)).to(device)
-
-    image = preprocess_image(img_path, image_size).unsqueeze(0).to(device)
-
-    with torch.no_grad():
-        image_features = model.encode_image(image)
-        text_features = model.encode_text(text)
-
-        emb = torch.cat((image_features, text_features), 1)
-        output = linear(emb.float())
-        predict = output.argmax(1)
-        predict = predict.cpu().numpy()
-        
-        # Collect true label and prediction
-        true_label = 1  # Replace with actual true label extraction
-        true_labels.append(true_label)
-        all_predictions.append(predict[0])
-        
-        # Calculate metrics for this image
-        image_metrics = calculate_metrics([true_label], [predict[0]])
-        
-        if args.metric_dir == "real":
-            output_dir = real_metric_path
-        elif args.metric_dir == "fake":
-            output_dir = fake_metric_path
-        
-        # Save metrics for this image
-        metrics_file = os.path.join(output_dir, f"{img_name}.json")
-        with open(metrics_file, 'w') as f:
-            json.dump(image_metrics, f)
-        
-        print(f"Image: {img_name}, Prediction: {predict[0]}")
-
-# Initialize lists to store metrics for real and fake images separately
-true_labels_real = []
-all_predictions_real = []
-
-true_labels_fake = []
-all_predictions_fake = []
-
-# Process images and classify
-for img_name in tqdm(os.listdir(args.image_folder)):
-    img_path = os.path.join(args.image_folder, img_name)
-    img = Image.open(img_path).convert('RGB')
-    tform = transforms.Compose(
-        [
-            transforms.Resize(224),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-        ]
-    )
+    tform = transforms.Compose([
+        transforms.Resize(224),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+    ])
     img = tform(img)
     img = img.unsqueeze(0).to(device)
 
@@ -213,8 +163,14 @@ for img_name in tqdm(os.listdir(args.image_folder)):
         output = linear(emb.float())
         predict = output.argmax(1).cpu().numpy()[0]
         
-        # Replace this with your actual logic for assigning true labels
-        true_label = 1  # Placeholder for the actual true label
+        # Assign true label based on the directory
+        if "real" in img_path:
+            true_label = 0
+        elif "fake" in img_path:
+            true_label = 1
+        else:
+            # Skip images that don't fit the criteria
+            continue
         
         # Collect metrics separately for real and fake images
         if args.metric_dir == "real":
@@ -251,7 +207,7 @@ all_predictions_combined = all_predictions_real + all_predictions_fake
 
 # Calculate combined metrics
 metrics_combined = calculate_metrics(true_labels_combined, all_predictions_combined)
-avg_precision_combined = average_precision_score(true_labels_combined, all_predictions_combined)
+avg_precision_combined = average_precision_score(true_labels_combined, all_predictions_combined, average='weighted')
 
 print("Combined Metrics for Real and Fake Images:")
 print("Confusion Matrix:\n", metrics_combined['confusion_matrix'])

@@ -29,7 +29,7 @@ echo "----------------------------------------"
 # git clone $REPO_URL
 
 # Change to the directory of the cloned repository
-cd De-Fake || { echo "Failed to change directory to De-Fake"; exit 1; }
+cd DeFake || { echo "Failed to change directory to DeFake"; exit 1; }
 
 echo "Creating and activating the conda environment..."
 echo "----------------------------------------"
@@ -44,7 +44,7 @@ echo "Installing packages from requirements.txt..."
 echo "----------------------------------------"
 
 # Install the Python packages specified in requirements.txt
-# pip install -r $REQUIREMENTS_FILE -q
+# pip install -r $REQUIREMENTS_FILE
 
 # Uncomment the following lines to download additional files if needed
 # echo "Downloading files from Google Drive..."
@@ -55,8 +55,8 @@ echo "Processing images..."
 echo "----------------------------------------"
 
 # Define paths to the folders containing real and fake images
-REAL_IMAGE_FOLDER="/home/shreyas/Desktop/Shreyas/Projects/De_Fake/images/real"  # Update this path as needed
-FAKE_IMAGE_FOLDER="/home/shreyas/Desktop/Shreyas/Projects/De_Fake/images/fake"  # Update this path as needed
+REAL_IMAGE_FOLDER="/home/shreyas/Desktop/Shreyas/AIISC/WACV_2025/De_Fake/images/real"  # Update this path as needed
+FAKE_IMAGE_FOLDER="/home/shreyas/Desktop/Shreyas/AIISC/WACV_2025/De_Fake/images/fake"  # Update this path as needed
 
 # Create directories to store metrics for real and fake images
 mkdir -p metrics_real

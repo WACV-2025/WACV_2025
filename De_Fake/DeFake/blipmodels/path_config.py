@@ -1,0 +1,1 @@
+base_path = "/home/shreyas/Desktop/Shreyas/AIISC/WACV_2025/De_Fake/DeFake/blipmodels/blipconfig"

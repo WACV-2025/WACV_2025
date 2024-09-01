@@ -1,1 +1,0 @@
-base_path = "/home/shreyas/Desktop/Shreyas/Projects/De_Fake/De-Fake/blipmodels/blipconfig/"
