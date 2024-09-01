@@ -7,8 +7,7 @@ import json
 import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
-
-from sklearn.metrics import confusion_matrix, accuracy_score, recall_score, precision_score, average_precision_score
+from sklearn.metrics import confusion_matrix, accuracy_score, recall_score, precision_score, average_precision_score, f1_score
 import torch.nn.functional as F
 
 import torch.nn as nn
@@ -21,6 +20,7 @@ from tqdm import tqdm
 from sklearn import metrics
 from sklearn.metrics import roc_curve
 from blipmodels import blip_decoder
+
 
 
 class NeuralNet(nn.Module):
@@ -95,13 +95,14 @@ def calculate_metrics(true_labels, predictions):
     """
     metrics_dict = {}
     if len(true_labels) == 0 or len(predictions) == 0:
-        return {"confusion_matrix": [], "accuracy": np.nan, "precision": np.nan, "recall": np.nan}
+        return {"confusion_matrix": [], "accuracy": np.nan, "precision": np.nan, "recall": np.nan , "f1_score":np.nan}
     
     conf_matrix = confusion_matrix(true_labels, predictions)
     metrics_dict['confusion_matrix'] = conf_matrix.tolist()
     metrics_dict['accuracy'] = accuracy_score(true_labels, predictions)
     metrics_dict['precision'] = precision_score(true_labels, predictions, average='weighted', zero_division=0)
     metrics_dict['recall'] = recall_score(true_labels, predictions, average='weighted', zero_division=0)
+    metrics_dict['f1_score'] = f1_score(true_labels, predictions, average='weighted', zero_division=0)
     return metrics_dict
 
 # Argument parsing
@@ -189,17 +190,27 @@ for img_name in tqdm(os.listdir(args.image_folder)):
         
         print(f"Image: {img_name}, Prediction: {predict}")
 
+def print_metrics(title, metrics):
+    """
+    Print metrics with a title and formatted output.
+    """
+    print(f"\n{'='*40}")
+    print(f"{title}")
+    print(f"{'='*40}")
+    print("Confusion Matrix:\n", metrics['confusion_matrix'])
+    print("Accuracy:", metrics['accuracy'])
+    print("Precision:", metrics['precision'])
+    print("Recall:", metrics['recall'])
+    print("F1 Score:", metrics['f1_score'])
+    print(f"{'='*40}")
+
 # Calculate final metrics for real images
 metrics_real = calculate_metrics(true_labels_real, all_predictions_real)
-print("Metrics for Real Images:")
-print("Confusion Matrix:\n", metrics_real['confusion_matrix'])
-print("Accuracy:", metrics_real['accuracy'])
+print_metrics("Metrics for Real Images", metrics_real)
 
 # Calculate final metrics for fake images
 metrics_fake = calculate_metrics(true_labels_fake, all_predictions_fake)
-print("Metrics for Fake Images:")
-print("Confusion Matrix:\n", metrics_fake['confusion_matrix'])
-print("Accuracy:", metrics_fake['accuracy'])
+print_metrics("Metrics for Fake Images", metrics_fake)
 
 # Combine true labels and predictions for both real and fake images
 true_labels_combined = true_labels_real + true_labels_fake
@@ -209,17 +220,25 @@ all_predictions_combined = all_predictions_real + all_predictions_fake
 metrics_combined = calculate_metrics(true_labels_combined, all_predictions_combined)
 avg_precision_combined = average_precision_score(true_labels_combined, all_predictions_combined, average='weighted')
 
-print("Combined Metrics for Real and Fake Images:")
+print(f"\n{'='*40}")
+print("Combined Metrics for Real and Fake Images")
+print(f"{'='*40}")
 print("Confusion Matrix:\n", metrics_combined['confusion_matrix'])
 print("Accuracy:", metrics_combined['accuracy'])
+print("Precision:", metrics_combined['precision'])
+print("Recall:", metrics_combined['recall'])
+print("F1 Score:", metrics_combined['f1_score'])
 print("Average Precision:", avg_precision_combined)
+print(f"{'='*40}")
 
+# Save final metrics to JSON file
 final_metrics = {
     "confusion_matrix": metrics_combined['confusion_matrix'],
     "accuracy": metrics_combined['accuracy'],
     "precision": metrics_combined['precision'],
     "recall": metrics_combined['recall'],
+    "f1_score": metrics_combined['f1_score'],
     "avg_precision_combined": avg_precision_combined
 }
 with open("final_metrics.json", "w") as f:
-    json.dump(final_metrics, f)
+    json.dump(final_metrics, f, indent=4)
