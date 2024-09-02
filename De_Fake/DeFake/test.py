@@ -100,9 +100,9 @@ def calculate_metrics(true_labels, predictions):
     conf_matrix = confusion_matrix(true_labels, predictions)
     metrics_dict['confusion_matrix'] = conf_matrix.tolist()
     metrics_dict['accuracy'] = accuracy_score(true_labels, predictions)
-    metrics_dict['precision'] = precision_score(true_labels, predictions, average='weighted', zero_division=0)
-    metrics_dict['recall'] = recall_score(true_labels, predictions, average='weighted', zero_division=0)
-    metrics_dict['f1_score'] = f1_score(true_labels, predictions, average='weighted', zero_division=0)
+    metrics_dict['precision'] = precision_score(true_labels, predictions)
+    metrics_dict['recall'] = recall_score(true_labels, predictions)
+    metrics_dict['f1_score'] = f1_score(true_labels, predictions)
     return metrics_dict
 
 # Argument parsing
